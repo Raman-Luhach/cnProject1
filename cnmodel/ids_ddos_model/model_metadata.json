@@ -1,0 +1,37 @@
+{
+  "model_type": "CNN_BiLSTM_Attention",
+  "num_classes": 13,
+  "class_names": [
+    "Benign",
+    "Brute Force -Web",
+    "Brute Force -XSS",
+    "DDOS attack-HOIC",
+    "DDOS attack-LOIC-UDP",
+    "DDoS attacks-LOIC-HTTP",
+    "DoS attacks-GoldenEye",
+    "DoS attacks-Hulk",
+    "DoS attacks-SlowHTTPTest",
+    "DoS attacks-Slowloris",
+    "FTP-BruteForce",
+    "SQL Injection",
+    "SSH-Bruteforce"
+  ],
+  "feature_count": 68,
+  "input_shape": [
+    68,
+    1
+  ],
+  "training_date": "2025-11-12T10:30:50.925428",
+  "training_time_hours": 0.16603979567686716,
+  "metrics": {
+    "accuracy": 0.91830807831361,
+    "precision": 0.9473750042933344,
+    "recall": 0.91830807831361,
+    "f1_score": 0.9084852077397004
+  },
+  "training_config": {
+    "batch_size": 256,
+    "epochs_trained": 50,
+    "max_epochs": 50
+  }
+}
