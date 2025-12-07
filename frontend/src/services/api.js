@@ -1,54 +1,56 @@
-/**
- * API Service - Communication with FastAPI backend
- */
 import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../utils/constants';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Monitoring endpoints
+// Monitoring API
 export const monitoringAPI = {
-  start: (interface_name, target_ip) => 
-    api.post('/api/monitoring/start', { interface: interface_name, target_ip }),
-  
-  stop: () => 
-    api.post('/api/monitoring/stop'),
-  
-  getStatus: () => 
-    api.get('/api/monitoring/status'),
+  start: (vmIp, networkInterface) => {
+    const params = { vm_ip: vmIp };
+    if (networkInterface) {
+      params['interface'] = networkInterface; // Use bracket notation to avoid reserved word error
+    }
+    return api.post('/api/monitoring/start', null, { params });
+  },
+  stop: () => api.post('/api/monitoring/stop'),
+  getStatus: () => api.get('/api/monitoring/status'),
 };
 
-// Attack endpoints
+// VM API
+export const vmAPI = {
+  create: (config) => api.post('/api/vm/create', config),
+  start: () => api.post('/api/vm/start'),
+  stop: () => api.post('/api/vm/stop'),
+  delete: () => api.delete('/api/vm/delete'),
+  getStatus: () => api.get('/api/vm/status'),
+  getIP: () => api.get('/api/vm/ip'),
+};
+
+// Attacks API
 export const attacksAPI = {
-  launch: (attack_type, duration, target_ip, intensity = 50) => 
-    api.post('/api/attacks/launch', { attack_type, duration, target_ip, intensity }),
-  
-  stop: () => 
-    api.post('/api/attacks/stop'),
-  
-  list: () => 
-    api.get('/api/attacks/list'),
+  list: () => api.get('/api/attacks/list'),
+  start: (attackRequest) => api.post('/api/attacks/start', attackRequest),
+  stop: (attackId) => api.post(`/api/attacks/stop/${attackId}`),
+  stopAll: () => api.post('/api/attacks/stop-all'),
+  getActive: () => api.get('/api/attacks/active'),
+  getHistory: (limit = 100) => api.get('/api/attacks/history', { params: { limit } }),
+  getStatus: (attackId) => api.get(`/api/attacks/${attackId}`),
 };
 
-// Statistics endpoints
+// Stats API
 export const statsAPI = {
-  getSummary: () => 
-    api.get('/api/stats/summary'),
-  
-  getRecent: (limit = 50) => 
-    api.get('/api/stats/recent', { params: { limit } }),
+  getSummary: () => api.get('/api/stats/summary'),
+  getModel: () => api.get('/api/stats/model'),
+  getWebSocket: () => api.get('/api/stats/websocket'),
+  getSystem: () => api.get('/api/stats/system'),
 };
 
 // Health check
-export const healthCheck = () => 
-  api.get('/health');
+export const healthCheck = () => api.get('/health');
 
 export default api;
-

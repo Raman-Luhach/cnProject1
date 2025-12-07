@@ -1,84 +1,119 @@
-"""
-Attack control endpoints for launching attacks
-"""
+"""Attack API routes"""
+
 from fastapi import APIRouter, HTTPException
-from app.models import AttackRequest, AttackListResponse
-import threading
+from typing import Dict, List
+import logging
 
-router = APIRouter()
+from app.models.attack import AttackRequest, AttackResponse, AttackListItem
+from app.services.attack_orchestrator import get_attack_orchestrator
+from app.websocket_manager import get_websocket_manager
 
-# List of available attacks
-AVAILABLE_ATTACKS = [
-    "DDOS attack-HOIC",
-    "DDOS attack-LOIC-UDP",
-    "DDoS attacks-LOIC-HTTP",
-    "DoS attacks-GoldenEye",
-    "DoS attacks-Hulk",
-    "DoS attacks-SlowHTTPTest",
-    "DoS attacks-Slowloris",
-    "Brute Force -Web",
-    "Brute Force -XSS",
-    "FTP-BruteForce",
-    "SQL Injection",
-    "SSH-Bruteforce"
-]
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/attacks", tags=["attacks"])
 
 
-@router.post("/launch")
-async def launch_attack(request: AttackRequest):
-    """Launch an attack against the target"""
-    if request.attack_type not in AVAILABLE_ATTACKS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid attack type. Available: {', '.join(AVAILABLE_ATTACKS)}"
-        )
+@router.get("/list")
+async def list_available_attacks() -> List[AttackListItem]:
+    """Get list of available attack types"""
+    orchestrator = get_attack_orchestrator()
+    attacks = orchestrator.get_available_attacks()
     
-    try:
-        from app.services.attack_orchestrator import AttackOrchestrator
-        
-        print(f"🚀 Launching: {request.attack_type} → {request.target_ip} ({request.duration}s)")
-        
-        # Create orchestrator for this target
-        orchestrator = AttackOrchestrator(request.target_ip)
-        
-        # Launch attack in background thread
-        def run_attack():
-            try:
-                orchestrator.launch_attack(request.attack_type, request.duration)
-            except Exception as e:
-                print(f"❌ Attack execution error: {e}")
-                import traceback
-                traceback.print_exc()
-        
-        thread = threading.Thread(target=run_attack, daemon=True, name=f"Attack-{request.attack_type}")
-        thread.start()
-        
-        return {
-            "status": "launched",
-            "attack_type": request.attack_type,
-            "target_ip": request.target_ip,
-            "duration": request.duration,
-            "message": f"Attack {request.attack_type} launched against {request.target_ip}"
-        }
-    except Exception as e:
-        print(f"❌ Error launching attack: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to launch attack: {str(e)}")
+    return [AttackListItem(**attack) for attack in attacks]
 
 
-@router.post("/stop")
-async def stop_attack():
-    """Stop all running attacks"""
-    # Note: This is a simplified version - in production you'd track all orchestrators
+@router.post("/start")
+async def start_attack(request: AttackRequest) -> AttackResponse:
+    """Start an attack"""
+    orchestrator = get_attack_orchestrator()
+    ws_manager = get_websocket_manager()
+    
+    # Start attack
+    attack = await orchestrator.start_attack(
+        attack_type=request.attack_type,
+        target_ip=request.target_ip,
+        target_port=request.target_port,
+        duration=request.duration,
+        intensity=request.intensity,
+        **request.parameters
+    )
+    
+    if not attack:
+        raise HTTPException(status_code=500, detail="Failed to start attack")
+    
+    # Get status
+    status = attack.get_status()
+    
+    # Broadcast status
+    await ws_manager.broadcast_attack_status(status)
+    
+    return AttackResponse(**status)
+
+
+@router.post("/stop/{attack_id}")
+async def stop_attack(attack_id: str) -> Dict:
+    """Stop a specific attack"""
+    orchestrator = get_attack_orchestrator()
+    ws_manager = get_websocket_manager()
+    
+    success = await orchestrator.stop_attack(attack_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Attack not found")
+    
+    # Broadcast status
+    await ws_manager.broadcast_attack_status({
+        'attack_id': attack_id,
+        'status': 'stopped'
+    })
+    
     return {
-        "status": "stopped",
-        "message": "Attack stop requested. Note: Attacks run for their duration."
+        "success": True,
+        "message": f"Attack {attack_id} stopped"
     }
 
 
-@router.get("/list", response_model=AttackListResponse)
-async def list_attacks():
-    """Get list of available attack types"""
-    return AttackListResponse(attacks=AVAILABLE_ATTACKS)
+@router.post("/stop-all")
+async def stop_all_attacks() -> Dict:
+    """Stop all active attacks"""
+    orchestrator = get_attack_orchestrator()
+    ws_manager = get_websocket_manager()
+    
+    count = await orchestrator.stop_all_attacks()
+    
+    # Broadcast status
+    await ws_manager.broadcast_attack_status({
+        'status': 'all_stopped',
+        'count': count
+    })
+    
+    return {
+        "success": True,
+        "message": f"Stopped {count} attacks"
+    }
 
+
+@router.get("/active")
+async def get_active_attacks() -> List[Dict]:
+    """Get all active attacks"""
+    orchestrator = get_attack_orchestrator()
+    return orchestrator.get_active_attacks()
+
+
+@router.get("/history")
+async def get_attack_history(limit: int = 100) -> List[Dict]:
+    """Get attack history"""
+    orchestrator = get_attack_orchestrator()
+    return orchestrator.get_attack_history(limit)
+
+
+@router.get("/{attack_id}")
+async def get_attack_status(attack_id: str) -> Dict:
+    """Get status of specific attack"""
+    orchestrator = get_attack_orchestrator()
+    status = orchestrator.get_attack_status(attack_id)
+    
+    if not status:
+        raise HTTPException(status_code=404, detail="Attack not found")
+    
+    return status

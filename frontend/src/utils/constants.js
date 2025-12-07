@@ -1,8 +1,16 @@
-/**
- * Constants for the IDS Dashboard
- */
+// API Configuration
+export const API_BASE_URL = 'http://localhost:8000';
+export const WS_URL = 'ws://localhost:8000/ws';
 
+// Default VM Configuration
+export const DEFAULT_VM_IP = '192.168.64.3';
+export const DEFAULT_VM_NAME = 'ids_target';
+
+// Attack Types
 export const ATTACK_TYPES = [
+  'Benign',
+  'Brute Force -Web',
+  'Brute Force -XSS',
   'DDOS attack-HOIC',
   'DDOS attack-LOIC-UDP',
   'DDoS attacks-LOIC-HTTP',
@@ -10,34 +18,40 @@ export const ATTACK_TYPES = [
   'DoS attacks-Hulk',
   'DoS attacks-SlowHTTPTest',
   'DoS attacks-Slowloris',
-  'Brute Force -Web',
-  'Brute Force -XSS',
   'FTP-BruteForce',
   'SQL Injection',
-  'SSH-Bruteforce',
+  'SSH-Bruteforce'
 ];
 
+// Attack Type Colors
 export const ATTACK_COLORS = {
-  'DDOS attack-HOIC': '#ff4444',
-  'DDOS attack-LOIC-UDP': '#ff6b6b',
-  'DDoS attacks-LOIC-HTTP': '#ee5a6f',
-  'DoS attacks-GoldenEye': '#c44569',
-  'DoS attacks-Hulk': '#f8b500',
-  'DoS attacks-SlowHTTPTest': '#ffa502',
-  'DoS attacks-Slowloris': '#ff6348',
-  'Brute Force -Web': '#ff4757',
-  'Brute Force -XSS': '#ff6348',
-  'FTP-BruteForce': '#ff4757',
-  'SQL Injection': '#ee5a6f',
-  'SSH-Bruteforce': '#c44569',
   'Benign': '#4caf50',
+  'Brute Force -Web': '#ff9800',
+  'Brute Force -XSS': '#ff5722',
+  'DDOS attack-HOIC': '#f44336',
+  'DDOS attack-LOIC-UDP': '#e91e63',
+  'DDoS attacks-LOIC-HTTP': '#9c27b0',
+  'DoS attacks-GoldenEye': '#673ab7',
+  'DoS attacks-Hulk': '#3f51b5',
+  'DoS attacks-SlowHTTPTest': '#2196f3',
+  'DoS attacks-Slowloris': '#00bcd4',
+  'FTP-BruteForce': '#009688',
+  'SQL Injection': '#ff5722',
+  'SSH-Bruteforce': '#795548'
 };
 
-export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+// Chart Configuration
+export const CHART_CONFIG = {
+  maxDataPoints: 100,
+  updateInterval: 1000, // ms
+};
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-export const DEFAULT_TARGET_IP = '192.168.64.2';
-
-export const DEFAULT_INTERFACE = 'bridge100';
-
+// WebSocket Events
+export const WS_EVENTS = {
+  DETECTION: 'detection',
+  VM_STATUS: 'vm_status',
+  ATTACK_STATUS: 'attack_status',
+  STATS: 'stats',
+  MONITORING_STATUS: 'monitoring_status',
+  CONNECTED: 'connected'
+};
