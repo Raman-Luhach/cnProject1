@@ -3,7 +3,7 @@ export const API_BASE_URL = 'http://localhost:8000';
 export const WS_URL = 'ws://localhost:8000/ws';
 
 // Default VM Configuration
-export const DEFAULT_VM_IP = '192.168.64.3';
+export const DEFAULT_VM_IP = '192.168.64.2';
 export const DEFAULT_VM_NAME = 'ids_target';
 
 // Attack Types

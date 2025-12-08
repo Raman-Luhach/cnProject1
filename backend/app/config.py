@@ -9,8 +9,8 @@ PROJECT_ROOT = BASE_DIR.parent
 MODEL_DIR = PROJECT_ROOT / "cnmodel" / "ids_ddos_model"
 
 # VM Configuration
-VM_NAME = "ids_target"  # Existing VM name
-DEFAULT_VM_IP = "192.168.64.3"  # Existing VM IP (will be used as fallback)
+VM_NAME = "target-vm"  # Active VM name
+DEFAULT_VM_IP = "192.168.64.2"  # Active VM IP (will be used as fallback)
 VM_IP = DEFAULT_VM_IP  # Alias for backwards compatibility
 VM_CPUS = 2
 VM_MEMORY = "2G"
@@ -19,7 +19,7 @@ VM_DISK = "10G"
 # Network Configuration
 FLOW_TIMEOUT = 2  # seconds (VERY aggressive for continuous detection)
 PACKET_BUFFER_SIZE = 1000
-MAX_FLOWS = 1000  # Reduced to force more frequent cleanup
+MAX_FLOWS = 5000  # Balanced: not too restrictive, not too permissive
 
 # Detection Configuration
 DETECTION_CONFIDENCE_THRESHOLD = 0.15  # Lowered to detect suspicious behavior (was 0.5, original 0.7)

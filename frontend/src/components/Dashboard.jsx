@@ -6,8 +6,10 @@ import DetectionAlerts from './DetectionAlerts';
 import Statistics from './Statistics';
 import DetectionChart from './DetectionChart';
 import FlowTable from './FlowTable';
+import NotificationCenter from './NotificationCenter';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useDetections } from '../hooks/useDetections';
+import { useNotifications } from '../hooks/useNotifications';
 import { monitoringAPI, statsAPI } from '../services/api';
 import { DEFAULT_VM_IP } from '../utils/constants';
 
@@ -19,8 +21,9 @@ const Dashboard = () => {
     monitoringStatus,
   } = useWebSocket();
 
-  const { attackCounts, timelineData, totalAttacks } = useDetections(detections);
   const [stats, setStats] = useState(null);
+  const { attackCounts, timelineData, totalAttacks, recentDetections } = useDetections(detections, stats);
+  const { notifications, clearNotification, clearAll } = useNotifications(detections);
   const [isMonitoring, setIsMonitoring] = useState(false);
 
   useEffect(() => {
@@ -66,70 +69,111 @@ const Dashboard = () => {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>🛡️ IDS Monitoring System</h1>
+        <div className="header-left">
+          <h1>🛡️ Intrusion Detection System</h1>
+          <p className="header-subtitle">Real-time Network Security Monitoring</p>
+        </div>
         <div className="header-status">
-          <span className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
-            {isConnected ? '● Connected' : '○ Disconnected'}
-          </span>
-          <span className={`status-indicator ${isMonitoring ? 'monitoring' : 'idle'}`}>
-            {isMonitoring ? '📡 Monitoring' : '⏸️ Idle'}
-          </span>
-          {stats && stats.total_detections !== undefined && stats.total_detections > 0 && (
-            <span className="status-indicator alert">
-              ⚠️ {stats.total_detections} Threats
-            </span>
+          <div className={`status-badge ${isConnected ? 'connected' : 'disconnected'}`}>
+            <span className="status-dot"></span>
+            <span className="status-text">{isConnected ? 'Connected' : 'Disconnected'}</span>
+          </div>
+          <div className={`status-badge ${isMonitoring ? 'monitoring' : 'idle'}`}>
+            <span className="status-dot"></span>
+            <span className="status-text">{isMonitoring ? 'Monitoring Active' : 'Monitoring Idle'}</span>
+          </div>
+          {stats && stats.detection && stats.detection.attack_count > 0 && (
+            <div className="status-badge alert">
+              <span className="status-dot"></span>
+              <span className="status-text">{stats.detection.attack_count} Threats</span>
+            </div>
           )}
         </div>
       </header>
 
       <div className="dashboard-controls">
-        <button
-          onClick={isMonitoring ? handleStopMonitoring : handleStartMonitoring}
-          className={isMonitoring ? 'btn-stop' : 'btn-start'}
-        >
-          {isMonitoring ? 'Stop Monitoring' : 'Start Monitoring'}
-        </button>
-        {stats && stats.packets_captured !== undefined && (
-          <div className="stats-quick">
-            <span>📦 {stats.packets_captured.toLocaleString()} packets captured</span>
-            {detections && detections.length > 0 && (
-              <span>🎯 {detections.length} recent detections</span>
-            )}
-          </div>
-        )}
+        <div className="controls-left">
+          <button
+            onClick={isMonitoring ? handleStopMonitoring : handleStartMonitoring}
+            className={`btn-primary ${isMonitoring ? 'btn-danger' : 'btn-success'}`}
+          >
+            {isMonitoring ? '⏹️ Stop Monitoring' : '▶️ Start Monitoring'}
+          </button>
+          {stats && stats.packets_captured !== undefined && isMonitoring && (
+            <div className="quick-stats">
+              <div className="quick-stat-item">
+                <span className="quick-stat-icon">📦</span>
+                <span className="quick-stat-value">{stats.packets_captured.toLocaleString()}</span>
+                <span className="quick-stat-label">Packets</span>
+              </div>
+              <div className="quick-stat-item">
+                <span className="quick-stat-icon">🔍</span>
+                <span className="quick-stat-value">{recentDetections.length}</span>
+                <span className="quick-stat-label">Recent (5min)</span>
+              </div>
+              {stats.detection && stats.detection.attack_count > 0 && (
+                <div className="quick-stat-item danger">
+                  <span className="quick-stat-icon">🚨</span>
+                  <span className="quick-stat-value">{stats.detection.attack_count}</span>
+                  <span className="quick-stat-label">Attacks</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
+      {notifications.length > 0 && (
+        <NotificationCenter
+          notifications={notifications}
+          onClear={clearNotification}
+          onClearAll={clearAll}
+        />
+      )}
+
       <div className="dashboard-grid">
-        <div className="grid-item vm-section">
-          <VMStatus vmStatus={vmStatus} />
+        <div className="grid-row">
+          <div className="grid-item vm-section">
+            <VMStatus vmStatus={vmStatus} />
+          </div>
+
+          <div className="grid-item attack-section">
+            <RealAttackControls />
+          </div>
         </div>
 
-        <div className="grid-item attack-section">
-          <RealAttackControls />
+        <div className="grid-row">
+          <div className="grid-item attack-section-sim">
+            <AttackControls vmStatus={vmStatus || { ipv4: DEFAULT_VM_IP }} />
+          </div>
         </div>
 
-        <div className="grid-item attack-section-sim">
-          <AttackControls vmStatus={vmStatus || { ipv4: DEFAULT_VM_IP }} />
+        <div className="grid-row">
+          <div className="grid-item stats-section full-width">
+            <Statistics 
+              stats={stats} 
+              attackCounts={attackCounts}
+              totalAttacks={totalAttacks}
+            />
+          </div>
         </div>
 
-        <div className="grid-item stats-section">
-          <Statistics 
-            stats={stats} 
-            attackCounts={attackCounts}
-            totalAttacks={totalAttacks}
-          />
+        <div className="grid-row">
+          <div className="grid-item chart-section">
+            <DetectionChart timelineData={timelineData} />
+          </div>
         </div>
 
-        <div className="grid-item chart-section">
-          <DetectionChart timelineData={timelineData} />
+        <div className="grid-row">
+          <div className="grid-item alerts-section">
+            <DetectionAlerts detections={recentDetections} />
+          </div>
         </div>
 
-        <div className="grid-item alerts-section">
-          <DetectionAlerts detections={detections} />
-        </div>
-
-        <div className="grid-item table-section">
-          <FlowTable detections={detections} />
+        <div className="grid-row">
+          <div className="grid-item table-section full-width">
+            <FlowTable detections={recentDetections} />
+          </div>
         </div>
       </div>
     </div>

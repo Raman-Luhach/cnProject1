@@ -19,10 +19,10 @@ export const useWebSocket = () => {
       setIsConnected(data.status === 'connected');
     };
 
-    // Detection event handler
+    // Detection event handler - increased buffer to 1000 for better tracking
     const handleDetection = (data) => {
       setDetections((prev) => {
-        const newDetections = [data.data, ...prev].slice(0, 100);
+        const newDetections = [data.data, ...prev].slice(0, 1000);
         return newDetections;
       });
     };

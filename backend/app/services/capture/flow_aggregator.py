@@ -227,21 +227,25 @@ class FlowAggregator:
         
         to_remove = []
         if force:
-            # Force remove ALL flows (when max_flows is reached)
-            to_remove = list(self.flows.keys())
+            # Force remove OLDEST flows (when max_flows is reached)
+            # Sort by last_seen time and remove oldest 50%
+            flows_by_age = sorted(self.flows.items(), key=lambda x: x[1].last_seen)
+            num_to_remove = max(1, len(flows_by_age) // 2)  # Remove oldest 50%
+            to_remove = [flow_id for flow_id, _ in flows_by_age[:num_to_remove]]
             if to_remove:
-                logger.info(f"Force cleanup: removing {len(to_remove)} flows")
+                logger.info(f"Force cleanup: removing {len(to_remove)} oldest flows")
         else:
             # Normal cleanup: remove flows older than timeout
-            for flow_id, flow in self.flows.items():
+            for flow_id, flow in list(self.flows.items()):  # Use list() to avoid dict size change during iteration
                 if current_time - flow.last_seen > self.flow_timeout:
                     to_remove.append(flow_id)
         
         for flow_id in to_remove:
-            flow = self.flows.pop(flow_id)
-            flow.finalize()
-            self.completed_flows.append(flow)
-            logger.debug(f"Flow {flow_id} timed out")
+            if flow_id in self.flows:  # Check if still exists
+                flow = self.flows.pop(flow_id)
+                flow.finalize()
+                self.completed_flows.append(flow)
+                logger.debug(f"Flow {flow_id} cleaned up")
     
     def get_completed_flows(self, limit: Optional[int] = None) -> List[Flow]:
         """Get completed flows and clear the buffer"""
